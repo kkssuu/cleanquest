@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>몬스터 클린업</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; font-family: 'Malgun Gothic', sans-serif; }
+        #map { width: 100vw; height: 100vh; }
+        
+        /* 제보하기 버튼 디자인 */
+        .report-btn {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            padding: 18px 30px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: 0.2s;
+        }
+        .report-btn:hover { background-color: #2ecc71; transform: translateX(-50%) scale(1.05); }
+
+        /* 상단 UI 바 */
+        .top-bar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">🏆 내 포인트: 1,200 P</div>
+    <div id="map"></div>
+    <button class="report-btn" onclick="openCamera()">📸 몬스터(쓰레기) 제보하기</button>
+
+    <script>
+        // 1. 지도 생성 (인천 송도 중심 좌표)
+        var map = L.map('map').setView([37.3827, 126.6399], 15);
+
+        // 2. 무료 오픈스트리트맵 타일 불러오기
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // 3. 보스몹 마커 추가 (빨간색)
+        var bossIcon = L.divIcon({html: '🔥', iconSize: [30, 30], className: 'boss-icon'});
+        var bossMarker = L.marker([37.3827, 126.6399], {icon: bossIcon}).addTo(map);
+        bossMarker.bindPopup("<b>🚨 보스몹: 가비지 타이탄</b><br>무단 투기 쓰레기 더미<br>처치 시 5000P 지급!").openPopup();
+
+        // 4. 잡몹 마커 추가 (근처 다른 좌표)
+        var mobIcon = L.divIcon({html: '👾', iconSize: [20, 20]});
+        var normalMarker = L.marker([37.3850, 126.6420], {icon: mobIcon}).addTo(map);
+        normalMarker.bindPopup("<b>👾 잡몹: 더스트 슬라임</b><br>담배꽁초 다수 발견<br>처치 시 100P 지급!");
+
+        // 5. 버튼 클릭 시 작동할 기능
+        function openCamera() {
+            alert("카메라 앱이 실행되어 청소 전 사진을 촬영합니다! (현재는 프로토타입입니다)");
+        }
+    </script>
+</body>
+</html>
