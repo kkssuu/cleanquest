@@ -3,32 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>몬스터 클린업: 상점 업데이트</title>
+    <title>몬스터 클린업: UI 업그레이드</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; font-family: 'Malgun Gothic', sans-serif; }
         #map { width: 100vw; height: 100vh; }
         
-        /* 상단 UI (포인트 및 상점 버튼) */
         .top-bar { position: absolute; top: 20px; left: 20px; z-index: 1000; background: white; padding: 10px 20px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-weight: bold; }
         .shop-btn { position: absolute; top: 20px; right: 20px; z-index: 1000; background: #9b59b6; color: white; padding: 10px 20px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s; }
         .shop-btn:hover { background: #8e44ad; transform: scale(1.05); }
 
-        /* 하단 제보 및 내 위치 버튼 */
         .report-btn { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 1000; padding: 18px 30px; background-color: #27ae60; color: white; border: none; border-radius: 30px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .center-btn { position: absolute; bottom: 110px; right: 20px; z-index: 1000; padding: 12px 20px; background-color: white; border-radius: 25px; border: none; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); color: #2980b9; transition: 0.2s; }
         .center-btn:hover { background-color: #f1f2f6; transform: scale(1.05); }
 
-        /* 팝업창 공통 디자인 (사진 미리보기 & 상점) */
         .modal-box { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2000; background: white; padding: 20px; border-radius: 15px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 85%; max-width: 320px; }
         
-        /* 상점 아이템 리스트 디자인 */
         .item-list { text-align: left; margin: 15px 0; max-height: 250px; overflow-y: auto; }
         .item { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #ddd; }
         .buy-btn { background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
         
-        /* 사진 미리보기 관련 */
         #previewBox img { max-width: 100%; max-height: 200px; border-radius: 10px; margin-bottom: 15px; }
         .submit-btn { padding: 10px 20px; background: #e67e22; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
         .cancel-btn { padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; }
@@ -55,7 +50,6 @@
     <div id="shopBox" class="modal-box">
         <h3 style="margin-top: 0; color: #9b59b6;">🛒 포인트 상점</h3>
         <p style="font-size: 14px; color: #666;">모은 포인트로 전리품을 교환하세요!</p>
-        
         <div class="item-list">
             <div class="item">
                 <div><b>☕ 아메리카노 기프티콘</b><br><span style="color:#e74c3c;">2,000 P</span></div>
@@ -74,15 +68,14 @@
     </div>
 
     <script>
-        // 전역 포인트 변수
         var myPoints = 1200;
 
-        // 화면 포인트 업데이트 함수
         function updateScoreBoard() {
             document.getElementById('scoreBoard').innerText = "🏆 " + myPoints.toLocaleString() + " P";
         }
 
-        var map = L.map('map').setView([37.3827, 126.6399], 15);
+        // 💡 핵심 변경점: 지도를 만들 때 zoomControl: false를 추가했습니다!
+        var map = L.map('map', { zoomControl: false }).setView([37.3827, 126.6399], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
         var bossIcon = L.divIcon({html: '🔥', iconSize: [30, 30]});
@@ -113,7 +106,6 @@
             else alert("아직 위치를 찾고 있습니다. 잠시만 기다려주세요!");
         }
 
-        // --- 사진 제보 로직 ---
         function openCamera() { document.getElementById('cameraInput').click(); }
 
         document.getElementById('cameraInput').addEventListener('change', function(event) {
@@ -129,7 +121,7 @@
         });
 
         function submitPhoto() {
-            myPoints += 50; // 제보 시 50포인트 증가
+            myPoints += 50; 
             updateScoreBoard();
             alert("✅ 제보가 완료되었습니다! (+50P 획득)\nAI 검토 후 추가 포인트가 지급될 수 있습니다.");
             closePreview();
@@ -140,18 +132,12 @@
             document.getElementById('cameraInput').value = ""; 
         }
 
-        // --- 상점 관련 로직 ---
-        function openShop() {
-            document.getElementById('shopBox').style.display = 'block';
-        }
-
-        function closeShop() {
-            document.getElementById('shopBox').style.display = 'none';
-        }
+        function openShop() { document.getElementById('shopBox').style.display = 'block'; }
+        function closeShop() { document.getElementById('shopBox').style.display = 'none'; }
 
         function buyItem(price, itemName) {
             if (myPoints >= price) {
-                myPoints -= price; // 포인트 차감
+                myPoints -= price; 
                 updateScoreBoard();
                 alert("🎉 [" + itemName + "] 교환 성공!\n(내 보관함으로 지급되었습니다.)");
             } else {
