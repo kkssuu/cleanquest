@@ -3,148 +3,298 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>몬스터 클린업: UI 업그레이드</title>
+    <title>몬스터 클린업: 시즌 2 (에코 에볼루션)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; font-family: 'Malgun Gothic', sans-serif; }
+        body { margin: 0; padding: 0; overflow: hidden; font-family: 'Malgun Gothic', sans-serif; background: #e9ecef; }
         #map { width: 100vw; height: 100vh; }
         
-        .top-bar { position: absolute; top: 20px; left: 20px; z-index: 1000; background: white; padding: 10px 20px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-weight: bold; }
-        .shop-btn { position: absolute; top: 20px; right: 20px; z-index: 1000; background: #9b59b6; color: white; padding: 10px 20px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s; }
-        .shop-btn:hover { background: #8e44ad; transform: scale(1.05); }
+        /* 상단 UI 레이아웃 */
+        .top-ui { position: absolute; top: 15px; width: 100%; display: flex; justify-content: space-between; padding: 0 15px; box-sizing: border-box; z-index: 1000; pointer-events: none; }
+        .user-stats { display: flex; flex-direction: column; gap: 5px; pointer-events: auto; }
+        .right-menus { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 50%; pointer-events: auto; }
+        
+        /* 🌿 에코 티어 배지 */
+        .tier-badge { padding: 8px 15px; border-radius: 15px; font-weight: bold; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.5s; text-align: center; }
+        .tier-seed { background: #8d6e63; color: white; }
+        .tier-sprout { background: #81c784; color: #1b5e20; }
+        .tier-tree { background: #4caf50; color: white; }
+        .tier-forest { background: #1b5e20; color: white; }
+        .tier-nature { background: linear-gradient(45deg, #00c853, #b2ff59, #00e676); color: #1b5e20; animation: glow 2s infinite; }
+        @keyframes glow { 0% { box-shadow: 0 0 5px #b2ff59; } 50% { box-shadow: 0 0 20px #b2ff59; } 100% { box-shadow: 0 0 5px #b2ff59; } }
 
+        .points-display { background: rgba(255,255,255,0.95); padding: 5px 12px; border-radius: 10px; font-size: 13px; font-weight: bold; width: fit-content; border: 1px solid #ddd; }
+
+        /* 메뉴 버튼들 */
+        .menu-btn { padding: 10px 12px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-size: 13px; }
+        .btn-shop { background: #9b59b6; color: white; }
+        .btn-inven { background: #34495e; color: white; }
+        .btn-comm { background: #f1c40f; color: #2c3e50; }
+
+        /* 하단 액션 버튼 */
         .report-btn { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 1000; padding: 18px 30px; background-color: #27ae60; color: white; border: none; border-radius: 30px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        .center-btn { position: absolute; bottom: 110px; right: 20px; z-index: 1000; padding: 12px 20px; background-color: white; border-radius: 25px; border: none; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); color: #2980b9; transition: 0.2s; }
-        .center-btn:hover { background-color: #f1f2f6; transform: scale(1.05); }
+        .center-btn { position: absolute; bottom: 110px; right: 20px; z-index: 1000; padding: 12px 20px; background-color: white; border-radius: 25px; border: none; font-size: 16px; font-weight: bold; color: #2e7d32; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
-        .modal-box { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2000; background: white; padding: 20px; border-radius: 15px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 85%; max-width: 320px; }
-        
-        .item-list { text-align: left; margin: 15px 0; max-height: 250px; overflow-y: auto; }
-        .item { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #ddd; }
-        .buy-btn { background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        
-        #previewBox img { max-width: 100%; max-height: 200px; border-radius: 10px; margin-bottom: 15px; }
-        .submit-btn { padding: 10px 20px; background: #e67e22; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
-        .cancel-btn { padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; }
+        /* 공통 모달 팝업 */
+        .modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1999; }
+        .modal-box { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2000; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 85%; max-width: 340px; max-height: 80vh; overflow-y: auto; }
+        .modal-title { margin-top: 0; font-size: 18px; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; text-align: center; }
+        .close-btn { width: 100%; margin-top: 15px; padding: 12px; background: #ecf0f1; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
+
+        /* 리스트 & 아이템 디자인 */
+        .item-list { display: flex; flex-direction: column; gap: 10px; }
+        .item-card { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 12px; border-radius: 10px; border: 1px solid #ddd; }
+        .buy-btn { background: #3498db; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+        /* 커뮤니티 탭 시스템 */
+        .tab-menu { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 15px; }
+        .tab-btn { flex: 1; padding: 10px; text-align: center; font-weight: bold; background: none; border: none; cursor: pointer; color: #7f8c8d; }
+        .tab-btn.active { color: #e67e22; border-bottom: 3px solid #e67e22; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* 커뮤니티 컨텐츠 디자인 */
+        .guild-table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: center; }
+        .guild-table th, .guild-table td { padding: 8px; border-bottom: 1px solid #eee; }
+        .my-guild { background: #fff9db; font-weight: bold; }
+        .board-item { padding: 10px; background: #fdfdfd; border-left: 4px solid #3498db; margin-bottom: 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .gallery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .gallery-item { background: #eee; height: 100px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: inset 0 0 10px rgba(0,0,0,0.05); }
+
+        /* 사진 인증용 */
+        .action-select { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-report { flex: 1; background: #ffb74d; color: #5d4037; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .btn-clear { flex: 1; background: #4caf50; color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div class="top-bar" id="scoreBoard">🏆 1,200 P</div>
-    <button class="shop-btn" onclick="openShop()">🛒 상점</button>
+    <div class="top-ui">
+        <div class="user-stats">
+            <div id="tierBadge" class="tier-badge">🌱 씨앗</div>
+            <div id="scoreBoard" class="points-display">1,200 P</div>
+        </div>
+        <div class="right-menus">
+            <button class="menu-btn btn-shop" onclick="openModal('shopBox')">🛒 상점</button>
+            <button class="menu-btn btn-inven" onclick="openInventory()">🎒 보관함</button>
+            <button class="menu-btn btn-comm" onclick="openModal('commBox')">🏘️ 커뮤니티</button>
+        </div>
+    </div>
+
     <div id="map"></div>
-    
     <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
+    <button class="report-btn" onclick="openCamera()">📸 활동 인증하기</button>
+    <button class="center-btn" onclick="centerOnUser()">🎯</button>
 
-    <button class="report-btn" onclick="openCamera()">📸 몬스터(쓰레기) 제보하기</button>
-    <button class="center-btn" onclick="centerOnUser()">🎯 내 위치로</button>
+    <div class="modal-bg" id="modalBg" onclick="closeAllModals()"></div>
 
-    <div id="previewBox" class="modal-box">
-        <h3 style="margin-top: 0;">🚨 몬스터 제보</h3>
-        <img id="imagePreview" src="" alt="미리보기 이미지">
-        <button class="submit-btn" onclick="submitPhoto()">이 사진으로 제보하기 (+50P)</button>
-        <button class="cancel-btn" onclick="closePreview()">다시 찍기</button>
+    <div id="activityBox" class="modal-box">
+        <h3 class="modal-title">어떤 활동을 하셨나요?</h3>
+        <img id="imagePreview" src="" style="width: 100%; border-radius: 10px; margin-bottom: 10px;">
+        <div class="action-select">
+            <button class="btn-report" onclick="finishActivity('report')">🔍 제보 (+50P)</button>
+            <button class="btn-clear" onclick="finishActivity('clear')">🧹 직접 청소 (+200P)</button>
+        </div>
+        <button class="close-btn" onclick="closeAllModals()">취소</button>
     </div>
 
     <div id="shopBox" class="modal-box">
-        <h3 style="margin-top: 0; color: #9b59b6;">🛒 포인트 상점</h3>
-        <p style="font-size: 14px; color: #666;">모은 포인트로 전리품을 교환하세요!</p>
+        <h3 class="modal-title" style="color: #8e44ad;">🛒 에코 상점</h3>
         <div class="item-list">
-            <div class="item">
-                <div><b>☕ 아메리카노 기프티콘</b><br><span style="color:#e74c3c;">2,000 P</span></div>
-                <button class="buy-btn" onclick="buyItem(2000, '아메리카노 기프티콘')">교환</button>
+            <div class="item-card">
+                <div>☕ 커피 기프티콘<br><span style="color:#e74c3c; font-weight:bold;">2,000 P</span></div>
+                <button class="buy-btn" onclick="buyItem(2000, '☕ 커피 기프티콘')">구매</button>
             </div>
-            <div class="item">
-                <div><b>🗑️ 종량제 봉투 (10L)</b><br><span style="color:#e74c3c;">500 P</span></div>
-                <button class="buy-btn" onclick="buyItem(500, '종량제 봉투')">교환</button>
+            <div class="item-card">
+                <div>🗑️ 종량제 봉투 (10L)<br><span style="color:#e74c3c; font-weight:bold;">500 P</span></div>
+                <button class="buy-btn" onclick="buyItem(500, '🗑️ 종량제 봉투')">구매</button>
             </div>
-            <div class="item">
-                <div><b>🧤 고급 집게 장비</b><br><span style="color:#e74c3c;">5,000 P</span></div>
-                <button class="buy-btn" onclick="buyItem(5000, '고급 집게 장비')">교환</button>
+            <div class="item-card">
+                <div>🧤 환경 수호자 장갑<br><span style="color:#e74c3c; font-weight:bold;">5,000 P</span></div>
+                <button class="buy-btn" onclick="buyItem(5000, '🧤 환경 수호자 장갑')">구매</button>
             </div>
         </div>
-        <button class="cancel-btn" onclick="closeShop()">닫기</button>
+        <button class="close-btn" onclick="closeAllModals()">닫기</button>
+    </div>
+
+    <div id="invenBox" class="modal-box">
+        <h3 class="modal-title" style="color: #2c3e50;">🎒 내 보관함</h3>
+        <div id="inventoryContent" class="item-list">
+            </div>
+        <button class="close-btn" onclick="closeAllModals()">닫기</button>
+    </div>
+
+    <div id="commBox" class="modal-box">
+        <h3 class="modal-title" style="color: #e67e22;">🏘️ 송도 1동 커뮤니티</h3>
+        
+        <div class="tab-menu">
+            <button class="tab-btn active" onclick="switchTab('tab1', this)">길드 랭킹</button>
+            <button class="tab-btn" onclick="switchTab('tab2', this)">게시판</button>
+            <button class="tab-btn" onclick="switchTab('tab3', this)">갤러리</button>
+        </div>
+
+        <div id="tab1" class="tab-content active">
+            <table class="guild-table">
+                <tr><th>순위</th><th>길드명</th><th>점수</th></tr>
+                <tr class="my-guild"><td>1</td><td>송도 1동 수비대</td><td>45,200</td></tr>
+                <tr><td>2</td><td>송도 2동 크루</td><td>38,900</td></tr>
+                <tr><td>3</td><td>연수 어벤져스</td><td>12,400</td></tr>
+            </table>
+            <p style="font-size: 12px; color: #888; text-align:center; margin-top:15px;">🔥 이번 주 보스몹 등장까지 D-2</p>
+        </div>
+
+        <div id="tab2" class="tab-content">
+            <div class="board-item"><b>[공지]</b> 이번 주말 센트럴파크 플로깅 모집! (1trash1follow 참석)</div>
+            <div class="board-item"><b>[자유]</b> 오늘 해돋이공원 꽁초 싹 치웠습니다~</div>
+            <div class="board-item"><b>[도움]</b> 3공구 쪽에 대형 폐기물 누가 버렸네요 ㅠㅠ</div>
+        </div>
+
+        <div id="tab3" class="tab-content">
+            <div class="gallery-grid">
+                <div class="gallery-item">🧹</div>
+                <div class="gallery-item">🌿</div>
+                <div class="gallery-item">✨</div>
+                <div class="gallery-item">📸</div>
+            </div>
+            <p style="font-size: 12px; color: #888; text-align:center;">이웃들의 생생한 정화 활동 모습!</p>
+        </div>
+
+        <button class="close-btn" onclick="closeAllModals()">닫기</button>
     </div>
 
     <script>
+        // --- 핵심 데이터 ---
         var myPoints = 1200;
+        var myInventory = []; // 구매한 아이템이 저장되는 배열
 
-        function updateScoreBoard() {
-            document.getElementById('scoreBoard').innerText = "🏆 " + myPoints.toLocaleString() + " P";
+        // --- UI 및 티어 업데이트 로직 ---
+        function updateTier() {
+            var badge = document.getElementById('tierBadge');
+            var tierName = "", tierClass = "";
+
+            if (myPoints < 1000) { tierName = "🌱 씨앗"; tierClass = "tier-seed"; }
+            else if (myPoints < 3000) { tierName = "🌿 새싹"; tierClass = "tier-sprout"; }
+            else if (myPoints < 7000) { tierName = "🌳 푸른 나무"; tierClass = "tier-tree"; }
+            else if (myPoints < 15000) { tierName = "🌲 울창한 숲"; tierClass = "tier-forest"; }
+            else { tierName = "✨ 대자연의 수호자"; tierClass = "tier-nature"; }
+
+            badge.innerText = tierName;
+            badge.className = "tier-badge " + tierClass;
+            document.getElementById('scoreBoard').innerText = myPoints.toLocaleString() + " P";
         }
 
-        // 💡 핵심 변경점: 지도를 만들 때 zoomControl: false를 추가했습니다!
+        // --- 상점 & 보관함 시스템 ---
+        function buyItem(price, itemName) {
+            if (myPoints >= price) {
+                myPoints -= price;
+                updateTier();
+                
+                // 보관함에 아이템 추가 로직
+                var existingItem = myInventory.find(item => item.name === itemName);
+                if (existingItem) {
+                    existingItem.count += 1; // 이미 있으면 개수만 증가
+                } else {
+                    myInventory.push({ name: itemName, count: 1 }); // 없으면 새로 추가
+                }
+                alert("🎉 [" + itemName + "] 구매 완료!\n보관함을 확인해 보세요.");
+            } else {
+                alert("❌ 포인트가 부족합니다!");
+            }
+        }
+
+        function openInventory() {
+            var contentDiv = document.getElementById('inventoryContent');
+            contentDiv.innerHTML = ""; // 내용 초기화
+
+            if (myInventory.length === 0) {
+                contentDiv.innerHTML = "<p style='text-align:center; color:#7f8c8d; margin:20px 0;'>보관함이 비어있습니다.<br>상점에서 전리품을 구매해 보세요!</p>";
+            } else {
+                myInventory.forEach(function(item) {
+                    contentDiv.innerHTML += `
+                        <div class="item-card" style="background:#f1f2f6;">
+                            <b>${item.name}</b> 
+                            <span style="background:#2c3e50; color:white; padding:3px 10px; border-radius:10px;">${item.count}개</span>
+                        </div>
+                    `;
+                });
+            }
+            openModal('invenBox');
+        }
+
+        // --- 활동 (제보/청소) 로직 ---
+        function finishActivity(type) {
+            if (type === 'report') {
+                myPoints += 50; alert("🔍 쓰레기 제보 완료! (+50P)");
+            } else {
+                myPoints += 200; alert("🧹 직접 청소 완료! 멋진 활약입니다. (+200P)");
+            }
+            updateTier();
+            closeAllModals();
+        }
+
+        // --- 커뮤니티 탭 전환 로직 ---
+        function switchTab(tabId, btnElement) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btnElement.classList.add('active');
+        }
+
+        // --- 모달(팝업창) 열기/닫기 공통 로직 ---
+        function openModal(id) {
+            closeAllModals(); // 다른 창 먼저 닫기
+            document.getElementById('modalBg').style.display = 'block';
+            document.getElementById(id).style.display = 'block';
+        }
+        function closeAllModals() {
+            document.getElementById('modalBg').style.display = 'none';
+            document.querySelectorAll('.modal-box').forEach(b => b.style.display = 'none');
+            document.getElementById('cameraInput').value = ""; // 사진 초기화
+        }
+
+        // --- 지도 및 카메라 연동 로직 (이전과 동일) ---
         var map = L.map('map', { zoomControl: false }).setView([37.3827, 126.6399], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
         var bossIcon = L.divIcon({html: '🔥', iconSize: [30, 30]});
-        L.marker([37.3827, 126.6399], {icon: bossIcon}).addTo(map).bindPopup("<b>🚨 보스몹: 무단투기 쓰레기</b>");
+        L.marker([37.3827, 126.6399], {icon: bossIcon}).addTo(map).bindPopup("<b>🚨 보스몹</b>");
         var mobIcon = L.divIcon({html: '👾', iconSize: [20, 20]});
-        L.marker([37.3850, 126.6420], {icon: mobIcon}).addTo(map).bindPopup("<b>👾 잡몹: 담배꽁초</b>");
+        L.marker([37.3850, 126.6420], {icon: mobIcon}).addTo(map).bindPopup("<b>👾 잡몹</b>");
 
-        var userCircle, accuracyCircle, userLatLng = null;
-
-        function drawBlueDot(lat, lng, accuracy, isFake) {
+        var userCircle, userLatLng = null;
+        function drawBlueDot(lat, lng, isFake) {
             userLatLng = [lat, lng];
-            if (!userCircle) { map.setView(userLatLng, 16); } 
-            else { map.removeLayer(userCircle); if(accuracyCircle) map.removeLayer(accuracyCircle); }
-            if(!isFake) { accuracyCircle = L.circle(userLatLng, { radius: accuracy, color: '#3498db', fillColor: '#3498db', fillOpacity: 0.15, stroke: false }).addTo(map); }
+            if (!userCircle) map.setView(userLatLng, 16);
+            else map.removeLayer(userCircle);
             userCircle = L.circleMarker(userLatLng, { radius: 8, color: '#fff', fillColor: '#2980b9', fillOpacity: 1, weight: 2 }).addTo(map);
         }
 
         if ('geolocation' in navigator) {
             navigator.geolocation.watchPosition(
-                function(pos) { drawBlueDot(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, false); }, 
-                function(err) { drawBlueDot(37.3840, 126.6410, 50, true); }, 
-                { enableHighAccuracy: true, timeout: 5000 } 
+                function(pos) { drawBlueDot(pos.coords.latitude, pos.coords.longitude, false); },
+                function(err) { drawBlueDot(37.3840, 126.6410, true); },
+                { enableHighAccuracy: true, timeout: 5000 }
             );
         }
 
-        function centerOnUser() { 
-            if (userLatLng) map.setView(userLatLng, 17, { animate: true, duration: 0.5 }); 
-            else alert("아직 위치를 찾고 있습니다. 잠시만 기다려주세요!");
-        }
+        function centerOnUser() { if (userLatLng) map.setView(userLatLng, 17, {animate:true}); }
 
         function openCamera() { document.getElementById('cameraInput').click(); }
-
-        document.getElementById('cameraInput').addEventListener('change', function(event) {
-            var file = event.target.files[0];
+        document.getElementById('cameraInput').addEventListener('change', function(e) {
+            var file = e.target.files[0];
             if (file) {
                 var reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('imagePreview').src = e.target.result; 
-                    document.getElementById('previewBox').style.display = 'block'; 
+                reader.onload = function(event) {
+                    document.getElementById('imagePreview').src = event.target.result;
+                    openModal('activityBox');
                 }
                 reader.readAsDataURL(file);
             }
         });
 
-        function submitPhoto() {
-            myPoints += 50; 
-            updateScoreBoard();
-            alert("✅ 제보가 완료되었습니다! (+50P 획득)\nAI 검토 후 추가 포인트가 지급될 수 있습니다.");
-            closePreview();
-        }
-
-        function closePreview() {
-            document.getElementById('previewBox').style.display = 'none'; 
-            document.getElementById('cameraInput').value = ""; 
-        }
-
-        function openShop() { document.getElementById('shopBox').style.display = 'block'; }
-        function closeShop() { document.getElementById('shopBox').style.display = 'none'; }
-
-        function buyItem(price, itemName) {
-            if (myPoints >= price) {
-                myPoints -= price; 
-                updateScoreBoard();
-                alert("🎉 [" + itemName + "] 교환 성공!\n(내 보관함으로 지급되었습니다.)");
-            } else {
-                var lack = price - myPoints;
-                alert("❌ 포인트가 부족합니다!\n" + lack + " P가 더 필요해요. 몬스터를 더 사냥하세요!");
-            }
-        }
+        // 시작 시 티어 초기화
+        updateTier();
     </script>
 </body>
 </html>
