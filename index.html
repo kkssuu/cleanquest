@@ -3,76 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>몬스터 클린업</title>
+    <title>몬스터 클린업: 상점 업데이트</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; font-family: 'Malgun Gothic', sans-serif; }
         #map { width: 100vw; height: 100vh; }
         
-        /* 제보하기 버튼 디자인 */
-        .report-btn {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            padding: 18px 30px;
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            border-radius: 30px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            transition: 0.2s;
-        }
-        .report-btn:hover { background-color: #2ecc71; transform: translateX(-50%) scale(1.05); }
+        /* 상단 UI (포인트 및 상점 버튼) */
+        .top-bar { position: absolute; top: 20px; left: 20px; z-index: 1000; background: white; padding: 10px 20px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-weight: bold; }
+        .shop-btn { position: absolute; top: 20px; right: 20px; z-index: 1000; background: #9b59b6; color: white; padding: 10px 20px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s; }
+        .shop-btn:hover { background: #8e44ad; transform: scale(1.05); }
 
-        /* 상단 UI 바 */
-        .top-bar {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            background: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            font-weight: bold;
-        }
+        /* 하단 제보 및 내 위치 버튼 */
+        .report-btn { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 1000; padding: 18px 30px; background-color: #27ae60; color: white; border: none; border-radius: 30px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .center-btn { position: absolute; bottom: 110px; right: 20px; z-index: 1000; padding: 12px 20px; background-color: white; border-radius: 25px; border: none; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); color: #2980b9; transition: 0.2s; }
+        .center-btn:hover { background-color: #f1f2f6; transform: scale(1.05); }
+
+        /* 팝업창 공통 디자인 (사진 미리보기 & 상점) */
+        .modal-box { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2000; background: white; padding: 20px; border-radius: 15px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 85%; max-width: 320px; }
+        
+        /* 상점 아이템 리스트 디자인 */
+        .item-list { text-align: left; margin: 15px 0; max-height: 250px; overflow-y: auto; }
+        .item { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #ddd; }
+        .buy-btn { background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        
+        /* 사진 미리보기 관련 */
+        #previewBox img { max-width: 100%; max-height: 200px; border-radius: 10px; margin-bottom: 15px; }
+        .submit-btn { padding: 10px 20px; background: #e67e22; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
+        .cancel-btn { padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; }
     </style>
 </head>
 <body>
 
-    <div class="top-bar">🏆 내 포인트: 1,200 P</div>
+    <div class="top-bar" id="scoreBoard">🏆 1,200 P</div>
+    <button class="shop-btn" onclick="openShop()">🛒 상점</button>
     <div id="map"></div>
+    
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
+
     <button class="report-btn" onclick="openCamera()">📸 몬스터(쓰레기) 제보하기</button>
+    <button class="center-btn" onclick="centerOnUser()">🎯 내 위치로</button>
+
+    <div id="previewBox" class="modal-box">
+        <h3 style="margin-top: 0;">🚨 몬스터 제보</h3>
+        <img id="imagePreview" src="" alt="미리보기 이미지">
+        <button class="submit-btn" onclick="submitPhoto()">이 사진으로 제보하기 (+50P)</button>
+        <button class="cancel-btn" onclick="closePreview()">다시 찍기</button>
+    </div>
+
+    <div id="shopBox" class="modal-box">
+        <h3 style="margin-top: 0; color: #9b59b6;">🛒 포인트 상점</h3>
+        <p style="font-size: 14px; color: #666;">모은 포인트로 전리품을 교환하세요!</p>
+        
+        <div class="item-list">
+            <div class="item">
+                <div><b>☕ 아메리카노 기프티콘</b><br><span style="color:#e74c3c;">2,000 P</span></div>
+                <button class="buy-btn" onclick="buyItem(2000, '아메리카노 기프티콘')">교환</button>
+            </div>
+            <div class="item">
+                <div><b>🗑️ 종량제 봉투 (10L)</b><br><span style="color:#e74c3c;">500 P</span></div>
+                <button class="buy-btn" onclick="buyItem(500, '종량제 봉투')">교환</button>
+            </div>
+            <div class="item">
+                <div><b>🧤 고급 집게 장비</b><br><span style="color:#e74c3c;">5,000 P</span></div>
+                <button class="buy-btn" onclick="buyItem(5000, '고급 집게 장비')">교환</button>
+            </div>
+        </div>
+        <button class="cancel-btn" onclick="closeShop()">닫기</button>
+    </div>
 
     <script>
-        // 1. 지도 생성 (인천 송도 중심 좌표)
+        // 전역 포인트 변수
+        var myPoints = 1200;
+
+        // 화면 포인트 업데이트 함수
+        function updateScoreBoard() {
+            document.getElementById('scoreBoard').innerText = "🏆 " + myPoints.toLocaleString() + " P";
+        }
+
         var map = L.map('map').setView([37.3827, 126.6399], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
-        // 2. 무료 오픈스트리트맵 타일 불러오기
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
-
-        // 3. 보스몹 마커 추가 (빨간색)
-        var bossIcon = L.divIcon({html: '🔥', iconSize: [30, 30], className: 'boss-icon'});
-        var bossMarker = L.marker([37.3827, 126.6399], {icon: bossIcon}).addTo(map);
-        bossMarker.bindPopup("<b>🚨 보스몹: 가비지 타이탄</b><br>무단 투기 쓰레기 더미<br>처치 시 5000P 지급!").openPopup();
-
-        // 4. 잡몹 마커 추가 (근처 다른 좌표)
+        var bossIcon = L.divIcon({html: '🔥', iconSize: [30, 30]});
+        L.marker([37.3827, 126.6399], {icon: bossIcon}).addTo(map).bindPopup("<b>🚨 보스몹: 무단투기 쓰레기</b>");
         var mobIcon = L.divIcon({html: '👾', iconSize: [20, 20]});
-        var normalMarker = L.marker([37.3850, 126.6420], {icon: mobIcon}).addTo(map);
-        normalMarker.bindPopup("<b>👾 잡몹: 더스트 슬라임</b><br>담배꽁초 다수 발견<br>처치 시 100P 지급!");
+        L.marker([37.3850, 126.6420], {icon: mobIcon}).addTo(map).bindPopup("<b>👾 잡몹: 담배꽁초</b>");
 
-        // 5. 버튼 클릭 시 작동할 기능
-        function openCamera() {
-            alert("카메라 앱이 실행되어 청소 전 사진을 촬영합니다! (현재는 프로토타입입니다)");
+        var userCircle, accuracyCircle, userLatLng = null;
+
+        function drawBlueDot(lat, lng, accuracy, isFake) {
+            userLatLng = [lat, lng];
+            if (!userCircle) { map.setView(userLatLng, 16); } 
+            else { map.removeLayer(userCircle); if(accuracyCircle) map.removeLayer(accuracyCircle); }
+            if(!isFake) { accuracyCircle = L.circle(userLatLng, { radius: accuracy, color: '#3498db', fillColor: '#3498db', fillOpacity: 0.15, stroke: false }).addTo(map); }
+            userCircle = L.circleMarker(userLatLng, { radius: 8, color: '#fff', fillColor: '#2980b9', fillOpacity: 1, weight: 2 }).addTo(map);
+        }
+
+        if ('geolocation' in navigator) {
+            navigator.geolocation.watchPosition(
+                function(pos) { drawBlueDot(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, false); }, 
+                function(err) { drawBlueDot(37.3840, 126.6410, 50, true); }, 
+                { enableHighAccuracy: true, timeout: 5000 } 
+            );
+        }
+
+        function centerOnUser() { 
+            if (userLatLng) map.setView(userLatLng, 17, { animate: true, duration: 0.5 }); 
+            else alert("아직 위치를 찾고 있습니다. 잠시만 기다려주세요!");
+        }
+
+        // --- 사진 제보 로직 ---
+        function openCamera() { document.getElementById('cameraInput').click(); }
+
+        document.getElementById('cameraInput').addEventListener('change', function(event) {
+            var file = event.target.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('imagePreview').src = e.target.result; 
+                    document.getElementById('previewBox').style.display = 'block'; 
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function submitPhoto() {
+            myPoints += 50; // 제보 시 50포인트 증가
+            updateScoreBoard();
+            alert("✅ 제보가 완료되었습니다! (+50P 획득)\nAI 검토 후 추가 포인트가 지급될 수 있습니다.");
+            closePreview();
+        }
+
+        function closePreview() {
+            document.getElementById('previewBox').style.display = 'none'; 
+            document.getElementById('cameraInput').value = ""; 
+        }
+
+        // --- 상점 관련 로직 ---
+        function openShop() {
+            document.getElementById('shopBox').style.display = 'block';
+        }
+
+        function closeShop() {
+            document.getElementById('shopBox').style.display = 'none';
+        }
+
+        function buyItem(price, itemName) {
+            if (myPoints >= price) {
+                myPoints -= price; // 포인트 차감
+                updateScoreBoard();
+                alert("🎉 [" + itemName + "] 교환 성공!\n(내 보관함으로 지급되었습니다.)");
+            } else {
+                var lack = price - myPoints;
+                alert("❌ 포인트가 부족합니다!\n" + lack + " P가 더 필요해요. 몬스터를 더 사냥하세요!");
+            }
         }
     </script>
 </body>
